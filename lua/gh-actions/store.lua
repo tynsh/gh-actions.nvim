@@ -6,6 +6,7 @@ local utils = require('gh-actions.utils')
 
 ---@class GhActionsState
 ---@field repo string
+---@field server string
 ---@field workflows GhWorkflow[]
 ---@field workflow_runs GhWorkflowRun[]
 ---@field workflow_jobs table<integer, GhWorkflowRunJob[]>

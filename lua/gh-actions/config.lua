@@ -7,6 +7,8 @@ local defaultConfig = {
   refresh_interval = 10,
   --- How much workflow runs and jobs should be indented
   indent = 2,
+  --- Weather to use the default branch when dispatching a workflow
+  dispatch_default_branch = true,
   ---@class GhActionsIcons
   icons = {
     workflow_dispatch = '⚡️',

@@ -197,9 +197,7 @@ function M.open()
       local server = store.get_state().server
       local repo = store.get_state().repo
 
-      -- TODO should we get current ref instead or show an input with the
-      --      default branch or current ref preselected?
-      local default_branch = git.get_default_branch()
+      local branch = Config.options.dispatch_default_branch and git.get_default_branch() or git.get_current_branch()
 
       local workflow_config = utils.read_yaml_file(workflow.path)
 
@@ -224,7 +222,7 @@ function M.open()
         if #questions > 0 and i <= #questions then
           questions[i]:mount()
         else
-          gh.dispatch_workflow(server, repo, workflow.id, default_branch, {
+          gh.dispatch_workflow(server, repo, workflow.id, branch, {
             body = { inputs = input_values or {} },
             callback = function(_res)
               utils.delay(2000, function()
