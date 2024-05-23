@@ -155,6 +155,38 @@ local function menu(opts)
   })
 end
 
+---@param workflow_id integer
+---@param inputs table<string, string>
+---@param branch? string
+function M.workflow_dispatch(workflow_id, inputs, branch)
+  local server = store.get_state().server
+  local repo = store.get_state().repo
+
+  if not branch then
+    branch = Config.options.dispatch_default_branch and git.get_default_branch() or git.get_current_branch()
+  end
+
+  gh.dispatch_workflow(server, repo, workflow_id, branch, {
+    body = { inputs = inputs },
+    callback = function(_)
+      utils.delay(2000, function()
+        gh.get_workflow_runs(server, repo, workflow_id, 5, {
+          callback = function(workflow_runs)
+            store.update_state(function(state)
+              state.workflow_runs = utils.uniq(function(run)
+                return run.id
+              end, {
+                table.unpack(workflow_runs),
+                table.unpack(state.workflow_runs),
+              })
+            end)
+          end,
+        })
+      end)
+    end,
+  })
+end
+
 function M.open()
   ui.open()
   ui.split:map('n', 'q', M.close, { noremap = true })
@@ -194,11 +226,6 @@ function M.open()
     local workflow = ui.get_workflow()
 
     if workflow then
-      local server = store.get_state().server
-      local repo = store.get_state().repo
-
-      local branch = Config.options.dispatch_default_branch and git.get_default_branch() or git.get_current_branch()
-
       local workflow_config = utils.read_yaml_file(workflow.path)
 
       if not workflow_config or not workflow_config.on.workflow_dispatch then
@@ -222,25 +249,7 @@ function M.open()
         if #questions > 0 and i <= #questions then
           questions[i]:mount()
         else
-          gh.dispatch_workflow(server, repo, workflow.id, branch, {
-            body = { inputs = input_values or {} },
-            callback = function(_res)
-              utils.delay(2000, function()
-                gh.get_workflow_runs(server, repo, workflow.id, 5, {
-                  callback = function(workflow_runs)
-                    store.update_state(function(state)
-                      state.workflow_runs = utils.uniq(function(run)
-                        return run.id
-                      end, {
-                        unpack(workflow_runs),
-                        unpack(state.workflow_runs),
-                      })
-                    end)
-                  end,
-                })
-              end)
-            end,
-          })
+          M.workflow_dispatch(workflow.id, input_values)
 
           if #questions == 0 then
             vim.notify(string.format('Dispatched %s', workflow.name))
